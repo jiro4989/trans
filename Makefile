@@ -1,11 +1,18 @@
 APPNAME := $(shell basename `pwd`)
-VERSION := v1.0.0
+VERSION := v$(shell gobump show -r)
 SRCS := $(shell find . -name "*.go" -type f )
 LDFLAGS := -ldflags="-s -w \
-	-X \"main.Version=$(VERSION)\" \
 	-extldflags \"-static\""
+XBUILD_TARGETS := \
+	-os="windows linux darwin" \
+	-arch="386 amd64" 
 DIST_DIR := dist/$(VERSION)
 README := README.md
+EXTERNAL_TOOLS := \
+	github.com/golang/dep/cmd/dep \
+	github.com/mitchellh/gox \
+	github.com/tcnksm/ghr \
+	github.com/motemen/gobump/cmd/gobump
 
 .PHONY: build
 build: $(SRCS)
@@ -13,8 +20,8 @@ build: $(SRCS)
 	go install
 
 .PHONY: xbuild
-xbuild: $(SRCS) gox
-	gox $(LDFLAGS) --output "$(DIST_DIR)/{{.Dir}}_{{.OS}}_{{.Arch}}/{{.Dir}}"
+xbuild: $(SRCS) bootstrap
+	gox $(LDFLAGS) $(XBUILD_TARGETS) --output "$(DIST_DIR)/{{.Dir}}_{{.OS}}_{{.Arch}}/{{.Dir}}"
 
 .PHONY: archive
 archive: xbuild
@@ -31,7 +38,7 @@ archive: xbuild
 		done
 
 .PHONY: release
-release: archive ghr
+release: archive bootstrap
 	ghr $(VERSION) $(DIST_DIR)/
 
 .PHONY: test
@@ -43,29 +50,16 @@ clean:
 	-rm -rf bin
 	-rm -rf $(DIST_DIR)
 
+# 依存ライブラリの更新
 .PHONY: deps
-deps: dep
+deps: bootstrap
 	dep ensure
 
-# 依存するツール
+# 外部ツールのインストール
+.PHONY: bootstrap
+bootstrap:
+	for t in $(EXTERNAL_TOOLS); do \
+		echo "Installing $$t ..." ; \
+		go get $$t ; \
+	done
 
-# パッケージ管理
-.PHONY: dep
-dep:
-ifeq ($(shell which dep 2>/dev/null),)
-	go get github.com/golang/dep/cmd/dep
-endif
-
-# クロスコンパイル
-.PHONY: gox
-gox:
-ifeq ($(shell which gox 2>/dev/null),)
-	go get github.com/mitchellh/gox
-endif
-
-# githubにリリース
-.PHONY: ghr
-ghr:
-ifeq ($(shell which ghr 2>/dev/null),)
-	go get github.com/tcnksm/ghr
-endif

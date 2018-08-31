@@ -11,9 +11,6 @@ import (
 	flags "github.com/jessevdk/go-flags"
 )
 
-// アプリのバージョン情報
-var Version string
-
 // options オプション引数
 type options struct {
 	Version   func() `short:"v" long:"version" description:"バージョン情報"`
