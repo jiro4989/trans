@@ -29,7 +29,7 @@ func main() {
 	}
 
 	// 入力を行配列として取得
-	lines, err := withOpen(args, opts, readLines)
+	lines, err := withOpen(args, readLines)
 	check(err)
 
 	// 行列データに変換
@@ -67,11 +67,17 @@ func newOptions() (options, []string) {
 	return opts, args
 }
 
-func withOpen(args []string, opts options, f func(r io.Reader) ([]string, error)) ([]string, error) {
+// withOpen は入力を引数の関数に適用し、開いた入力を閉じる。
+// argsの値に応じて入力を標準入力かファイル入力かを切り替える
+func withOpen(args []string, f func(r io.Reader) ([]string, error)) ([]string, error) {
 	l := len(args)
 	if l < 1 {
 		// 通常は到達し得ない
 		return nil, errors.New("引数が不足しています。")
+	}
+
+	if f == nil {
+		return nil, errors.New("適用する関数がnilでした。")
 	}
 
 	// 引数が1個の場合はファイルからデータ読み取り

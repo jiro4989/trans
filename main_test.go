@@ -10,7 +10,17 @@ import (
 )
 
 func TestWithOpen(t *testing.T) {
-	// TODO
+	withOpen([]string{}, func(r io.Reader) ([]string, error) {
+		assert.NotNil(t, r)
+		return nil, nil
+	})
+	withOpen([]string{"testdata/in/sample.csv"}, func(r io.Reader) ([]string, error) {
+		assert.NotNil(t, r)
+		return nil, nil
+	})
+	ls, err := withOpen([]string{"testdata/in/sample.csv"}, nil)
+	assert.Nil(t, ls)
+	assert.Error(t, err)
 }
 
 type TestReadLinesData struct {
