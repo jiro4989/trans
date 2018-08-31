@@ -311,5 +311,21 @@ func TestFormat(t *testing.T) {
 }
 
 func TestOut(t *testing.T) {
-	// TODO
+	err := out([]string{
+		"id,name,note",
+		"1,taro,male",
+	}, options{OutFile: "testdata/out/test_out.csv"})
+	assert.Nil(t, err)
+
+	err = out([]string{
+		"id,name,note",
+		"1,taro,male",
+	}, options{})
+	assert.Nil(t, err)
+
+	err = out([]string{
+		"id,name,note",
+		"1,taro,male",
+	}, options{OutFile: "hogefugatmp/foobar.csv"})
+	assert.Error(t, err)
 }
