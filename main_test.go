@@ -212,9 +212,90 @@ func TestTranspose(t *testing.T) {
 			in:  [][]string{},
 			out: [][]string{},
 		},
+		TestTransposeData{
+			in:  nil,
+			out: [][]string{},
+		},
 	}
 	for _, v := range tds {
 		out := transpose(v.in)
+		assert.Equal(t, v.out, out)
+	}
+}
+
+type TestFormatData struct {
+	matrix [][]string
+	opts   options
+	out    []string
+}
+
+func TestFormat(t *testing.T) {
+	tds := []TestFormatData{
+		TestFormatData{
+			matrix: [][]string{
+				{"id", "name", "note"},
+				{"1", "taro", "hogehoge"},
+				{"2", "hanako", "foobar"},
+			},
+			opts: options{Delimiter: ","},
+			out: []string{
+				"id,name,note",
+				"1,taro,hogehoge",
+				"2,hanako,foobar",
+			},
+		},
+		TestFormatData{
+			matrix: [][]string{
+				{"id", "name", "note"},
+				{"1", "taro", "hogehoge"},
+				{"2", "", "foobar"},
+			},
+			opts: options{Delimiter: ","},
+			out: []string{
+				"id,name,note",
+				"1,taro,hogehoge",
+				"2,,foobar",
+			},
+		},
+		TestFormatData{
+			matrix: [][]string{
+				{"id", "name", "note"},
+				{"1", "taro", "hogehoge"},
+				{"2", "hanako", "foobar"},
+			},
+			opts: options{Delimiter: "\t"},
+			out: []string{
+				"id	name	note",
+				"1	taro	hogehoge",
+				"2	hanako	foobar",
+			},
+		},
+		TestFormatData{
+			matrix: [][]string{
+				{"id", "name", "note"},
+				{"1", "taro", "hogehoge"},
+				{"2", "hanako", "foobar"},
+			},
+			opts: options{Delimiter: ""},
+			out: []string{
+				"idnamenote",
+				"1tarohogehoge",
+				"2hanakofoobar",
+			},
+		},
+		TestFormatData{
+			matrix: [][]string{},
+			opts:   options{Delimiter: ""},
+			out:    []string{},
+		},
+		TestFormatData{
+			matrix: nil,
+			opts:   options{Delimiter: ""},
+			out:    []string{},
+		},
+	}
+	for _, v := range tds {
+		out := format(v.matrix, v.opts)
 		assert.Equal(t, v.out, out)
 	}
 }

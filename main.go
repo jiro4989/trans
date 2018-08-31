@@ -50,8 +50,11 @@ func main() {
 	// 行列の入れ替え
 	transMatrix := transpose(matrix)
 
+	// 出力用文字列の生成
+	s := format(transMatrix, opts)
+
 	// 出力
-	out(transMatrix, opts)
+	out(s)
 }
 
 func withOpen(args []string, opts options, f func(r io.Reader) ([]string, error)) ([]string, error) {
@@ -131,6 +134,19 @@ func transpose(m [][]string) [][]string {
 	return matrix
 }
 
-func out(m [][]string, opts options) {
+// format は行列データを出力用配列に変換する。
+func format(m [][]string, opts options) []string {
+	lines := make([]string, len(m))
+	for i, r := range m {
+		line := strings.Join(r, opts.Delimiter)
+		lines[i] = line
+	}
+	return lines
+}
 
+// out はコンソール出力します。
+func out(ls []string) {
+	for _, v := range ls {
+		fmt.Println(v)
+	}
 }
