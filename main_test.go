@@ -148,8 +148,75 @@ func TestToMatrix(t *testing.T) {
 	}
 }
 
+type TestTransposeData struct {
+	in  [][]string
+	out [][]string
+}
+
 func TestTranspose(t *testing.T) {
-	// TODO
+	tds := []TestTransposeData{
+		TestTransposeData{
+			in: [][]string{
+				{"id", "name", "note"},
+				{"1", "taro", "hogehoge"},
+				{"2", "hanako", "foobar"},
+			},
+			out: [][]string{
+				{"id", "1", "2"},
+				{"name", "taro", "hanako"},
+				{"note", "hogehoge", "foobar"},
+			},
+		},
+		TestTransposeData{
+			in: [][]string{
+				{"id", "name", "note"},
+				{"1", "taro"},
+				{"2", "hanako", "foobar"},
+			},
+			out: [][]string{
+				{"id", "1", "2"},
+				{"name", "taro", "hanako"},
+				{"note", "", "foobar"},
+			},
+		},
+		TestTransposeData{
+			in: [][]string{
+				{"id", "name", "note"},
+				{"1", "taro", "hogehoge"},
+			},
+			out: [][]string{
+				{"id", "1"},
+				{"name", "taro"},
+				{"note", "hogehoge"},
+			},
+		},
+		TestTransposeData{
+			in: [][]string{
+				{"id"},
+				{"1"},
+				{"2"},
+			},
+			out: [][]string{
+				{"id", "1", "2"},
+			},
+		},
+		TestTransposeData{
+			in: [][]string{
+				{"id"},
+			},
+			out: [][]string{
+				{"id"},
+			},
+		},
+		TestTransposeData{
+			in:  [][]string{},
+			out: [][]string{},
+		},
+	}
+	for _, v := range tds {
+		out := transpose(v.in)
+		assert.Equal(t, v.out, out)
+	}
 }
 
 func TestOut(t *testing.T) {

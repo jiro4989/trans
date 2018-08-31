@@ -48,8 +48,7 @@ func main() {
 	matrix := toMatrix(lines, opts)
 
 	// 行列の入れ替え
-	transMatrix, err := transpose(matrix)
-	check(err)
+	transMatrix := transpose(matrix)
 
 	// 出力
 	out(transMatrix, opts)
@@ -110,8 +109,26 @@ func toMatrix(lines []string, opts options) [][]string {
 }
 
 // transpose は行列データを入れ替えます。
-func transpose(m [][]string) ([][]string, error) {
-	return nil, nil
+func transpose(m [][]string) [][]string {
+	if len(m) <= 0 {
+		return [][]string{}
+	}
+
+	// 二次元配列の初期化
+	rl := len(m)
+	cl := len(m[0])
+	matrix := make([][]string, cl)
+	for i := range matrix {
+		matrix[i] = make([]string, rl)
+	}
+
+	// 行列入れ替え
+	for i, r := range m {
+		for j, c := range r {
+			matrix[j][i] = c
+		}
+	}
+	return matrix
 }
 
 func out(m [][]string, opts options) {
