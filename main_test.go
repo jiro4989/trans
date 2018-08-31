@@ -57,7 +57,7 @@ func TestReadLines(t *testing.T) {
 
 	tds2 := []TestReadLinesData2{
 		TestReadLinesData2{
-			in: "testdata/sample.tsv",
+			in: "testdata/in/sample.tsv",
 			out: []string{
 				"id\tname\tnote",
 				"1\ttaro\tmale",
@@ -66,7 +66,7 @@ func TestReadLines(t *testing.T) {
 			},
 		},
 		TestReadLinesData2{
-			in:  "testdata/empty.tsv",
+			in:  "testdata/in/empty.tsv",
 			out: []string{},
 		},
 	}

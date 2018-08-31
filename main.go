@@ -15,24 +15,12 @@ import (
 type options struct {
 	Version   func() `short:"v" long:"version" description:"バージョン情報"`
 	Delimiter string `short:"d" long:"delimiter" description:"入力データの区切り文字" default:"\t"`
+	WriteFlag bool   `short:"w" long:"write" description:"入力ファイルを上書きする"`
+	OutFile   string `short:"o" long:"outfile" description:"出力ファイルパス"`
 }
 
 func main() {
-	var opts options
-	opts.Version = func() {
-		fmt.Println(Version)
-		os.Exit(0)
-	}
-
-	args, err := flags.Parse(&opts)
-	if err != nil {
-		os.Exit(0)
-	}
-
-	if len(args) < 1 {
-		fmt.Println("Need arguments. args=", args)
-		os.Exit(1)
-	}
+	opts, args := newOptions()
 
 	check := func(err error) {
 		if err != nil {
@@ -51,10 +39,32 @@ func main() {
 	transMatrix := transpose(matrix)
 
 	// 出力用文字列の生成
-	s := format(transMatrix, opts)
+	outLines := format(transMatrix, opts)
 
 	// 出力
-	out(s)
+	err = out(outLines, opts)
+	check(err)
+}
+
+func newOptions() (options, []string) {
+	var opts options
+	opts.Version = func() {
+		fmt.Println(Version)
+		os.Exit(0)
+	}
+
+	args, err := flags.Parse(&opts)
+	if err != nil {
+		os.Exit(0)
+	}
+
+	// 出力先ファイル指定
+	switch {
+	case 1 <= len(args) && opts.WriteFlag:
+		opts.OutFile = args[0]
+	}
+
+	return opts, args
 }
 
 func withOpen(args []string, opts options, f func(r io.Reader) ([]string, error)) ([]string, error) {
@@ -144,9 +154,24 @@ func format(m [][]string, opts options) []string {
 	return lines
 }
 
-// out はコンソール出力します。
-func out(ls []string) {
+// out は標準出力、あるいはファイル出力します。
+// 出力ファイルを指定した場合はファイル出力する。
+// 出力ファイル指定がない場合は標準出力する。
+func out(ls []string, opts options) error {
+	if opts.OutFile != "" {
+		w, err := os.OpenFile(opts.OutFile, os.O_RDWR|os.O_CREATE, os.ModePerm)
+		if err != nil {
+			return err
+		}
+		defer w.Close()
+		for _, v := range ls {
+			fmt.Fprintln(w, v)
+		}
+		return nil
+	}
+
 	for _, v := range ls {
 		fmt.Println(v)
 	}
+	return nil
 }
