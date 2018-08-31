@@ -20,7 +20,7 @@ type options struct {
 }
 
 func main() {
-	opts, args := newOptions()
+	opts, args := parseOptions()
 
 	check := func(err error) {
 		if err != nil {
@@ -46,7 +46,9 @@ func main() {
 	check(err)
 }
 
-func newOptions() (options, []string) {
+// parseOptions はコマンドラインオプションを解析する。
+// 解析あとはオプションと、残った引数を返す。
+func parseOptions() (options, []string) {
 	var opts options
 	opts.Version = func() {
 		fmt.Println(Version)
@@ -59,6 +61,8 @@ func newOptions() (options, []string) {
 	}
 
 	// 出力先ファイル指定
+	// 今はまだ一つしか証券分岐がないが、
+	// ここの分岐は将来的に増える可能性がある
 	switch {
 	case 1 <= len(args) && opts.WriteFlag:
 		opts.OutFile = args[0]
