@@ -84,8 +84,68 @@ func TestReadLines(t *testing.T) {
 
 }
 
+type TestToMatrixData struct {
+	lines []string
+	opts  options
+	out   [][]string
+}
+
 func TestToMatrix(t *testing.T) {
-	// TODO
+	tds := []TestToMatrixData{
+		TestToMatrixData{
+			lines: []string{
+				"id,name,note",
+				"1,taro,hogehoge",
+				"2,hanako,foobar",
+			},
+			opts: options{Delimiter: ","},
+			out: [][]string{
+				{"id", "name", "note"},
+				{"1", "taro", "hogehoge"},
+				{"2", "hanako", "foobar"},
+			},
+		},
+		TestToMatrixData{
+			lines: []string{
+				"id,name,note",
+				"1,taro,hogehoge",
+				"2,hanako,foobar",
+			},
+			opts: options{Delimiter: "\t"},
+			out: [][]string{
+				{"id,name,note"},
+				{"1,taro,hogehoge"},
+				{"2,hanako,foobar"},
+			},
+		},
+		TestToMatrixData{
+			lines: []string{
+				"id",
+				"1",
+				"2",
+			},
+			opts: options{Delimiter: ","},
+			out: [][]string{
+				{"id"},
+				{"1"},
+				{"2"},
+			},
+		},
+		TestToMatrixData{
+			lines: []string{},
+			opts:  options{Delimiter: ","},
+			out:   [][]string{},
+		},
+		TestToMatrixData{
+			lines: nil,
+			opts:  options{Delimiter: ","},
+			out:   [][]string{},
+		},
+	}
+	for _, v := range tds {
+		out := toMatrix(v.lines, v.opts)
+		assert.Equal(t, v.out, out)
+	}
 }
 
 func TestTranspose(t *testing.T) {

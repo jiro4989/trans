@@ -97,7 +97,16 @@ func readLines(r io.Reader) ([]string, error) {
 
 // toMatrix は行データを行列データに変換する。
 func toMatrix(lines []string, opts options) [][]string {
-	return nil
+	if len(lines) <= 0 {
+		return [][]string{}
+	}
+
+	matrix := make([][]string, len(lines))
+	for i, line := range lines {
+		s := strings.Split(line, opts.Delimiter)
+		matrix[i] = s
+	}
+	return matrix
 }
 
 // transpose は行列データを入れ替えます。
