@@ -74,12 +74,6 @@ func parseOptions() (options, []string) {
 // withOpen は入力を引数の関数に適用し、開いた入力を閉じる。
 // argsの値に応じて入力を標準入力かファイル入力かを切り替える
 func withOpen(args []string, f func(r io.Reader) ([]string, error)) ([]string, error) {
-	l := len(args)
-	if l < 1 {
-		// 通常は到達し得ない
-		return nil, errors.New("引数が不足しています。")
-	}
-
 	if f == nil {
 		return nil, errors.New("適用する関数がnilでした。")
 	}
@@ -89,7 +83,7 @@ func withOpen(args []string, f func(r io.Reader) ([]string, error)) ([]string, e
 	var (
 		r *os.File
 	)
-	if l < 1 {
+	if len(args) < 1 {
 		r = os.Stdin
 	} else {
 		var err error
