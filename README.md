@@ -4,10 +4,31 @@
 
 ## 使い方
 
+### 代表的な例
+
+```bash
+[16:30:29] ~/go/src/github.com/jiro4989/trans master 
+% cat testdata/in/sample.tsv
+id	name	note
+1	taro	male
+2	hanako	female
+3	jiro	male
+
+[16:30:36] ~/go/src/github.com/jiro4989/trans master 
+% trans testdata/in/sample.tsv    
+id	1	2	3
+name	taro	hanako	jiro
+note	male	female	male
+```
+
+### その他使い方
+
 ```bash
 trans testdata/in/sample.tsv
 
 trans -d , testdata/in/sample.csv
+
+trans -d , testdata/in/sample.csv -o testdata/out/sample.csv
 
 cat testdata/in/sample.csv | trans -d ,
 ```
