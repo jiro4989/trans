@@ -55,11 +55,11 @@ cat testdata/in/sample.csv | trans -d ,
 
 | No | 引数のファイル | OutFile | WriteFlag | 標準出力 | 引数ファイル | OutFile |
 |---:|----------------|---------|-----------|:--------:|:------------:|:-------:|
-|  1 | nil            | nil     | FALSE     |     o    |       x      |    x    |
-|  2 | nil            | nil     | TRUE      |     o    |       x      |    x    |
-|  3 | nil            | outfile | FALSE     |     x    |       x      |    o    |
-|  4 | nil            | outfile | TRUE      |     x    |       x      |    o    |
-|  5 | infile         | nil     | FALSE     |     o    |       x      |    x    |
-|  6 | infile         | nil     | TRUE      |     x    |       o      |    x    |
+|  1 | NONE           | NONE    | FALSE     |     o    |       x      |    x    |
+|  2 | NONE           | NONE    | TRUE      |     o    |       x      |    x    |
+|  3 | NONE           | outfile | FALSE     |     x    |       x      |    o    |
+|  4 | NONE           | outfile | TRUE      |     x    |       x      |    o    |
+|  5 | infile         | NONE    | FALSE     |     o    |       x      |    x    |
+|  6 | infile         | NONE    | TRUE      |     x    |       o      |    x    |
 |  7 | infile         | outfile | FALSE     |     x    |       x      |    o    |
 |  8 | infile         | outfile | TRUE      |     x    |       o      |    x    |
