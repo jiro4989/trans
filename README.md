@@ -2,28 +2,29 @@
 
 ファイル、標準入力の行列データの行と列を入れ替えるコマンド。
 
-***作りかけ***
-
 ## 使い方
 
 ```bash
-trans testdata/sample.tsv
-trans -d , testdata/sample.csv
-cat testdata/sample.csv | trans -s ,
+trans testdata/in/sample.tsv
+
+trans -d , testdata/in/sample.csv
+
+cat testdata/in/sample.csv | trans -d ,
 ```
 
 ## ヘルプ
 
     Usage:
-      main [OPTIONS]
+      trans [OPTIONS]
 
     Application Options:
       -v, --version    バージョン情報
       -d, --delimiter= 入力データの区切り文字 (default: "\t")
+      -w, --write      入力ファイルを上書きする
+      -o, --outfile=   出力ファイルパス
 
     Help Options:
       -h, --help       Show this help message
-
 
 ## 出力パターン
 
