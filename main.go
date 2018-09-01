@@ -48,6 +48,7 @@ func main() {
 
 // parseOptions はコマンドラインオプションを解析する。
 // 解析あとはオプションと、残った引数を返す。
+// また、入力ファイルパスの重複を除外する。
 func parseOptions() (options, []string) {
 	var opts options
 	opts.Version = func() {
@@ -60,6 +61,9 @@ func parseOptions() (options, []string) {
 		os.Exit(0)
 	}
 
+	// 重複削除
+	args = distinctString(args)
+
 	// 出力先ファイル指定
 	// 今はまだ一つしか証券分岐がないが、
 	// ここの分岐は将来的に増える可能性がある
@@ -69,6 +73,19 @@ func parseOptions() (options, []string) {
 	}
 
 	return opts, args
+}
+
+// distinctString は文字列スライスの重複を除外して返却する。
+func distinctString(ss []string) []string {
+	m := make(map[string]bool)
+	uniq := []string{}
+	for _, s := range ss {
+		if !m[s] {
+			m[s] = true
+			uniq = append(uniq, s)
+		}
+	}
+	return uniq
 }
 
 // withOpen は入力を引数の関数に適用し、開いた入力を閉じる。

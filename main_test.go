@@ -9,6 +9,90 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestMain(t *testing.T) {
+	os.Args = []string{"main.go", "-d", ",", "testdata/in/sample.csv"}
+	main()
+
+	os.Args = []string{"main.go", "-d", "\t", "testdata/in/sample.tsv"}
+	main()
+
+	os.Args = []string{"main.go", "testdata/in/sample.tsv"}
+	main()
+
+	os.Args = []string{"main.go", "-d", ",", "testdata/in/sample.csv", "-o", "testdata/out/sample_main.csv"}
+	main()
+
+	os.Args = []string{"main.go", "testdata/in/sample.tsv", "-o", "testdata/out/sample_main.tsv"}
+	main()
+}
+
+type TestParseOptionsData struct {
+	in   []string
+	opts options
+	args []string
+}
+
+func TestParseOptions(t *testing.T) {
+	tds := []TestParseOptionsData{
+		TestParseOptionsData{
+			in:   []string{"main.go", "-d", ",", "testdata/sample.csv"},
+			opts: options{Delimiter: ","},
+			args: []string{"testdata/sample.csv"},
+		},
+		TestParseOptionsData{
+			in:   []string{"main.go", "-d", ",", "testdata/sample.csv", "testdata/sample.csv"},
+			opts: options{Delimiter: ","},
+			args: []string{"testdata/sample.csv"},
+		},
+		TestParseOptionsData{
+			in:   []string{"main.go", "testdata/sample.csv", "testdata/sample.csv"},
+			opts: options{Delimiter: "\t"},
+			args: []string{"testdata/sample.csv"},
+		},
+		TestParseOptionsData{
+			in:   []string{"main.go"},
+			opts: options{Delimiter: "\t"},
+			args: []string{},
+		},
+	}
+	for _, v := range tds {
+		os.Args = v.in
+		opts, args := parseOptions()
+		assert.Equal(t, v.opts.Delimiter, opts.Delimiter)
+		assert.Equal(t, v.args, args)
+	}
+}
+
+type TestDistinctStringData struct {
+	in  []string
+	out []string
+}
+
+func TestDistinctString(t *testing.T) {
+	tds := []TestDistinctStringData{
+		TestDistinctStringData{
+			in:  []string{"aaa", "aaa"},
+			out: []string{"aaa"},
+		},
+		TestDistinctStringData{
+			in:  []string{"aaa", "aaa", "aaa", "bbb", "bbb", "ccc"},
+			out: []string{"aaa", "bbb", "ccc"},
+		},
+		TestDistinctStringData{
+			in:  []string{},
+			out: []string{},
+		},
+		TestDistinctStringData{
+			in:  nil,
+			out: []string{},
+		},
+	}
+	for _, v := range tds {
+		out := distinctString(v.in)
+		assert.Equal(t, v.out, out)
+	}
+}
+
 func TestWithOpen(t *testing.T) {
 	withOpen([]string{}, func(r io.Reader) ([]string, error) {
 		assert.NotNil(t, r)
