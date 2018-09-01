@@ -30,6 +30,7 @@ trans -d , testdata/in/sample.csv
 
 trans -d , testdata/in/sample.csv -o testdata/out/sample.csv
 
+# 標準入力にも対応
 cat testdata/in/sample.csv | trans -d ,
 ```
 
@@ -52,7 +53,6 @@ cat testdata/in/sample.csv | trans -d ,
 複数の入力ファイル指定があった場合に
 それら全てを上書きできるように引数＋WriteFlagの優先度を高めにしている。
 
-||前提条件|||出力|||
 | No | 引数のファイル | OutFile | WriteFlag | 標準出力 | 引数ファイル | OutFile |
 |---:|----------------|---------|-----------|:--------:|:------------:|:-------:|
 |  1 | nil            | nil     | FALSE     |     o    |       x      |    x    |
