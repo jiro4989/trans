@@ -53,6 +53,8 @@ cat testdata/in/sample.csv | trans -d ,
 複数の入力ファイル指定があった場合に
 それら全てを上書きできるように引数＋WriteFlagの優先度を高めにしている。
 
+引数個数〜OutFormatまでが前提条件、それ以降が出力先
+
 | 引数個数 | OutFile | WriteFlag | OutDir | OutFormat | 標準出力 | 引数ファイル | OutFile | OutDir | CurrentDir |
 |:--------:|:-------:|:---------:|:------:|:---------:|:--------:|:------------:|:-------:|:------:|:----------:|
 |     0    |    x    |     0     |    x   |     x     |     o    |       x      |    x    |    x   |      x     |
