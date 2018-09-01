@@ -53,13 +53,53 @@ cat testdata/in/sample.csv | trans -d ,
 複数の入力ファイル指定があった場合に
 それら全てを上書きできるように引数＋WriteFlagの優先度を高めにしている。
 
-| No | 引数のファイル | OutFile | WriteFlag | 標準出力 | 引数ファイル | OutFile |
-|---:|----------------|---------|-----------|:--------:|:------------:|:-------:|
-|  1 | NONE           | NONE    | FALSE     |     o    |       x      |    x    |
-|  2 | NONE           | NONE    | TRUE      |     o    |       x      |    x    |
-|  3 | NONE           | outfile | FALSE     |     x    |       x      |    o    |
-|  4 | NONE           | outfile | TRUE      |     x    |       x      |    o    |
-|  5 | infile         | NONE    | FALSE     |     o    |       x      |    x    |
-|  6 | infile         | NONE    | TRUE      |     x    |       o      |    x    |
-|  7 | infile         | outfile | FALSE     |     x    |       x      |    o    |
-|  8 | infile         | outfile | TRUE      |     x    |       o      |    x    |
+| 引数個数 | OutFile | WriteFlag | OutDir | OutFormat | 標準出力 | 引数ファイル | OutFile | OutDir | CurrentDir |
+|:--------:|:-------:|:---------:|:------:|:---------:|:--------:|:------------:|:-------:|:------:|:----------:|
+|     0    |    x    |     0     |    x   |     x     |     o    |       x      |    x    |    x   |      x     |
+|     0    |    x    |     0     |    x   |     o     |     o    |       x      |    x    |    x   |      x     |
+|     0    |    x    |     0     |    o   |     x     |     o    |       x      |    x    |    x   |      x     |
+|     0    |    x    |     0     |    o   |     o     |     o    |       x      |    x    |    x   |      x     |
+|     0    |    x    |     1     |    x   |     x     |     o    |       x      |    x    |    x   |      x     |
+|     0    |    x    |     1     |    x   |     o     |     o    |       x      |    x    |    x   |      x     |
+|     0    |    x    |     1     |    o   |     x     |     o    |       x      |    x    |    x   |      x     |
+|     0    |    x    |     1     |    o   |     o     |     o    |       x      |    x    |    x   |      x     |
+|     0    |    o    |     0     |    x   |     x     |     x    |       x      |    o    |    x   |      x     |
+|     0    |    o    |     0     |    x   |     o     |     x    |       x      |    o    |    x   |      x     |
+|     0    |    o    |     0     |    o   |     x     |     x    |       x      |    o    |    x   |      x     |
+|     0    |    o    |     0     |    o   |     o     |     x    |       x      |    o    |    x   |      x     |
+|     0    |    o    |     1     |    x   |     x     |     x    |       x      |    o    |    x   |      x     |
+|     0    |    o    |     1     |    x   |     o     |     x    |       x      |    o    |    x   |      x     |
+|     0    |    o    |     1     |    o   |     x     |     x    |       x      |    o    |    x   |      x     |
+|     0    |    o    |     1     |    o   |     o     |     x    |       x      |    o    |    x   |      x     |
+|     1    |    x    |     0     |    x   |     x     |     o    |       x      |    x    |    x   |      x     |
+|     1    |    x    |     0     |    x   |     o     |     o    |       x      |    x    |    x   |      x     |
+|     1    |    x    |     0     |    o   |     x     |     o    |       x      |    x    |    x   |      x     |
+|     1    |    x    |     0     |    o   |     o     |     o    |       x      |    x    |    x   |      x     |
+|     1    |    x    |     1     |    x   |     x     |     x    |       o      |    x    |    x   |      x     |
+|     1    |    x    |     1     |    x   |     o     |     x    |       o      |    x    |    x   |      x     |
+|     1    |    x    |     1     |    o   |     x     |     x    |       o      |    x    |    x   |      x     |
+|     1    |    x    |     1     |    o   |     o     |     x    |       o      |    x    |    x   |      x     |
+|     1    |    o    |     0     |    x   |     x     |     x    |       x      |    o    |    x   |      x     |
+|     1    |    o    |     0     |    x   |     o     |     x    |       x      |    o    |    x   |      x     |
+|     1    |    o    |     0     |    o   |     x     |     x    |       x      |    o    |    x   |      x     |
+|     1    |    o    |     0     |    o   |     o     |     x    |       x      |    o    |    x   |      x     |
+|     1    |    o    |     1     |    x   |     x     |     x    |       o      |    x    |    x   |      x     |
+|     1    |    o    |     1     |    x   |     o     |     x    |       o      |    x    |    x   |      x     |
+|     1    |    o    |     1     |    o   |     x     |     x    |       o      |    x    |    x   |      x     |
+|     1    |    o    |     1     |    o   |     o     |     x    |       o      |    x    |    x   |      x     |
+|     2    |    x    |     0     |    x   |     x     |     o    |       x      |    x    |    x   |      x     |
+|     2    |    x    |     0     |    x   |     o     |     x    |       x      |    x    |    x   |      o     |
+|     2    |    x    |     0     |    o   |     x     |     x    |       x      |    x    |    o   |      x     |
+|     2    |    x    |     0     |    o   |     o     |     x    |       x      |    x    |    o   |      x     |
+|     2    |    x    |     1     |    x   |     x     |     x    |       o      |    x    |    x   |      x     |
+|     2    |    x    |     1     |    x   |     o     |     x    |       o      |    x    |    x   |      x     |
+|     2    |    x    |     1     |    o   |     x     |     x    |       o      |    x    |    x   |      x     |
+|     2    |    x    |     1     |    o   |     o     |     x    |       o      |    x    |    x   |      x     |
+|     2    |    o    |     0     |    x   |     x     |     o    |       x      |    x    |    x   |      x     |
+|     2    |    o    |     0     |    x   |     o     |     x    |       x      |    x    |    x   |      o     |
+|     2    |    o    |     0     |    o   |     x     |     x    |       x      |    x    |    o   |      x     |
+|     2    |    o    |     0     |    o   |     o     |     x    |       x      |    x    |    o   |      x     |
+|     2    |    o    |     1     |    x   |     x     |     x    |       o      |    x    |    x   |      x     |
+|     2    |    o    |     1     |    x   |     o     |     x    |       o      |    x    |    x   |      x     |
+|     2    |    o    |     1     |    o   |     x     |     x    |       o      |    x    |    x   |      x     |
+|     2    |    o    |     1     |    o   |     o     |     x    |       o      |    x    |    x   |      x     |
