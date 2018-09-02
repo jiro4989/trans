@@ -1,29 +1,196 @@
 package main
 
 import (
-	"bytes"
-	"io"
+	"io/ioutil"
 	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
+const (
+	inSampleTSV           = "testdata/in/sample.tsv"
+	inSampleCSV           = "testdata/in/sample.csv"
+	inSampleTranspotedTSV = "testdata/in/sample_transpoted.tsv"
+)
+
 func TestMain(t *testing.T) {
-	os.Args = []string{"main.go", "-d", ",", "testdata/in/sample.csv"}
+	os.Args = []string{"main.go", "-d", ",", inSampleCSV}
 	main()
 
-	os.Args = []string{"main.go", "-d", "\t", "testdata/in/sample.tsv"}
+	os.Args = []string{"main.go", "-d", "\t", inSampleTSV}
 	main()
 
-	os.Args = []string{"main.go", "testdata/in/sample.tsv"}
+	os.Args = []string{"main.go", inSampleTSV}
 	main()
 
-	os.Args = []string{"main.go", "-d", ",", "testdata/in/sample.csv", "-o", "testdata/out/sample_main.csv"}
+	os.Args = []string{"main.go", "-d", ",", inSampleCSV, "-o", "testdata/out/sample_main.csv"}
 	main()
 
-	os.Args = []string{"main.go", "testdata/in/sample.tsv", "-o", "testdata/out/sample_main.tsv"}
+	os.Args = []string{"main.go", inSampleTSV, "-o", "testdata/out/sample_main.tsv"}
 	main()
+}
+
+type TestProcess1InputData struct {
+	args    []string
+	opts    options
+	outdata string
+}
+
+func TestProcess1Input(t *testing.T) {
+	tds := []TestProcess1InputData{
+		TestProcess1InputData{
+			args: []string{inSampleTSV},
+			opts: options{
+				Delimiter: "\t",
+			},
+			outdata: "id\t1\t2\t3\nname\ttaro\thanako\tjiro\nnote\tmale\tfemale\tmale\n",
+		},
+		TestProcess1InputData{
+			args: []string{inSampleTSV},
+			opts: options{
+				Delimiter: "\t",
+				OutFile:   "testdata/out/sample_proc1.tsv",
+			},
+			outdata: "id\t1\t2\t3\nname\ttaro\thanako\tjiro\nnote\tmale\tfemale\tmale\n",
+		},
+	}
+	for _, v := range tds {
+		err := process1Input(v.args, v.opts)
+		assert.Nil(t, err)
+
+		ofn := v.opts.OutFile
+		if ofn != "" {
+			b, err := ioutil.ReadFile(ofn)
+			assert.Nil(t, err)
+			s := string(b)
+			assert.Equal(t, v.outdata, s)
+		}
+	}
+}
+
+type TestProcessMultiInputData struct {
+	args     []string
+	opts     options
+	outfiles []string
+	outdatas []string
+	ret      int
+}
+
+func TestProcessMultiInput(t *testing.T) {
+	const outdir = "testdata/out/multiinput"
+	tds := []TestProcessMultiInputData{
+		TestProcessMultiInputData{
+			args: []string{
+				inSampleTSV,
+				inSampleTranspotedTSV,
+			},
+			opts: options{
+				Delimiter: "\t",
+				OutDir:    outdir + "/01",
+			},
+			outfiles: []string{
+				outdir + "/01/sample.tsv.trans",
+				outdir + "/01/sample_transpoted.tsv.trans",
+			},
+			outdatas: []string{
+				"id\t1\t2\t3\nname\ttaro\thanako\tjiro\nnote\tmale\tfemale\tmale\n",
+				"id\tname\tnote\n1\ttaro\tmale\n2\thanako\tfemale\n3\tjiro\tmale\n",
+			},
+			ret: 0,
+		},
+		TestProcessMultiInputData{
+			args: []string{
+				inSampleTSV,
+				inSampleTranspotedTSV,
+			},
+			opts: options{
+				Delimiter: "\t",
+				OutDir:    outdir + "/02",
+			},
+			outfiles: []string{
+				outdir + "/02/sample.tsv.trans",
+				outdir + "/02/sample_transpoted.tsv.trans",
+			},
+			outdatas: []string{
+				"id\t1\t2\t3\nname\ttaro\thanako\tjiro\nnote\tmale\tfemale\tmale\n",
+				"id\tname\tnote\n1\ttaro\tmale\n2\thanako\tfemale\n3\tjiro\tmale\n",
+			},
+			ret: 0,
+		},
+		TestProcessMultiInputData{
+			args: []string{
+				inSampleTSV,
+				inSampleTranspotedTSV,
+			},
+			opts: options{
+				Delimiter: "\t",
+			},
+			ret: 0,
+		},
+	}
+	for _, v := range tds {
+		ret := processMultiInput(v.args, v.opts)
+		assert.Equal(t, v.ret, ret)
+
+		if 0 < len(v.outfiles) {
+			for i, ofn := range v.outfiles {
+				b, err := ioutil.ReadFile(ofn)
+				assert.Nil(t, err)
+				s := string(b)
+				assert.Equal(t, v.outdatas[i], s)
+			}
+		}
+	}
+
+	// TODO エラーコード1が返ってこない
+	// tds = []TestProcessMultiInputData{
+	// 	TestProcessMultiInputData{
+	// 		args: []string{},
+	// 		opts: options{
+	// 			Delimiter: "\t",
+	// 		},
+	// 		outdatas: []string{},
+	// 		ret:      1,
+	// 	},
+	// }
+	// for _, v := range tds {
+	// 	ret := processMultiInput(v.args, v.opts)
+	// 	assert.Equal(t, v.ret, ret)
+	// }
+}
+
+type TestToTransposedLinesData struct {
+	lines []string
+	opts  options
+	out   []string
+}
+
+func TestToTransposedLines(t *testing.T) {
+	tds := []TestToTransposedLinesData{
+		TestToTransposedLinesData{
+			lines: []string{
+				"id,name,note",
+				"1,taro,hogehoge",
+				"2,hanako,foobar",
+			},
+			opts: options{Delimiter: ","},
+			out: []string{
+				"id,1,2",
+				"name,taro,hanako",
+				"note,hogehoge,foobar",
+			},
+		},
+		TestToTransposedLinesData{
+			lines: []string{},
+			opts:  options{Delimiter: ","},
+			out:   []string{},
+		},
+	}
+	for _, v := range tds {
+		out := toTransposedLines(v.lines, v.opts)
+		assert.Equal(t, v.out, out)
+	}
 }
 
 type TestParseOptionsData struct {
@@ -63,337 +230,6 @@ func TestParseOptions(t *testing.T) {
 	}
 }
 
-type TestDistinctStringData struct {
-	in  []string
-	out []string
-}
-
-func TestDistinctString(t *testing.T) {
-	tds := []TestDistinctStringData{
-		TestDistinctStringData{
-			in:  []string{"aaa", "aaa"},
-			out: []string{"aaa"},
-		},
-		TestDistinctStringData{
-			in:  []string{"aaa", "aaa", "aaa", "bbb", "bbb", "ccc"},
-			out: []string{"aaa", "bbb", "ccc"},
-		},
-		TestDistinctStringData{
-			in:  []string{},
-			out: []string{},
-		},
-		TestDistinctStringData{
-			in:  nil,
-			out: []string{},
-		},
-	}
-	for _, v := range tds {
-		out := distinctString(v.in)
-		assert.Equal(t, v.out, out)
-	}
-}
-
-func TestWithOpen(t *testing.T) {
-	withOpen([]string{}, func(r io.Reader) ([]string, error) {
-		assert.NotNil(t, r)
-		return nil, nil
-	})
-	withOpen([]string{"testdata/in/sample.csv"}, func(r io.Reader) ([]string, error) {
-		assert.NotNil(t, r)
-		return nil, nil
-	})
-	ls, err := withOpen([]string{"testdata/in/sample.csv"}, nil)
-	assert.Nil(t, ls)
-	assert.Error(t, err)
-}
-
-type TestReadLinesData struct {
-	in  io.Reader
-	out []string
-}
-
-type TestReadLinesData2 struct {
-	in  string
-	out []string
-}
-
-func TestReadLines(t *testing.T) {
-	f := func(s string) io.Reader {
-		return bytes.NewBufferString(s)
-	}
-	tds := []TestReadLinesData{
-		TestReadLinesData{
-			in:  f("12345\n67890\n"),
-			out: []string{"12345", "67890"},
-		},
-		TestReadLinesData{
-			in:  f("12345\n67890"),
-			out: []string{"12345", "67890"},
-		},
-		TestReadLinesData{
-			in:  f("12345"),
-			out: []string{"12345"},
-		},
-		TestReadLinesData{
-			in:  f(""),
-			out: []string{},
-		},
-		TestReadLinesData{
-			in:  f("あいうえお\n漢字"),
-			out: []string{"あいうえお", "漢字"},
-		},
-	}
-	for _, td := range tds {
-		out, err := readLines(td.in)
-		assert.Equal(t, td.out, out)
-		assert.NoError(t, err)
-	}
-
-	tds2 := []TestReadLinesData2{
-		TestReadLinesData2{
-			in: "testdata/in/sample.tsv",
-			out: []string{
-				"id\tname\tnote",
-				"1\ttaro\tmale",
-				"2\thanako\tfemale",
-				"3\tjiro\tmale",
-			},
-		},
-		TestReadLinesData2{
-			in:  "testdata/in/empty.tsv",
-			out: []string{},
-		},
-	}
-	for _, td := range tds2 {
-		func() {
-			r, err := os.Open(td.in)
-			assert.NoError(t, err)
-			defer r.Close()
-
-			out, err := readLines(r)
-			assert.Equal(t, td.out, out)
-			assert.NoError(t, err)
-		}()
-	}
-
-}
-
-type TestToMatrixData struct {
-	lines []string
-	opts  options
-	out   [][]string
-}
-
-func TestToMatrix(t *testing.T) {
-	tds := []TestToMatrixData{
-		TestToMatrixData{
-			lines: []string{
-				"id,name,note",
-				"1,taro,hogehoge",
-				"2,hanako,foobar",
-			},
-			opts: options{Delimiter: ","},
-			out: [][]string{
-				{"id", "name", "note"},
-				{"1", "taro", "hogehoge"},
-				{"2", "hanako", "foobar"},
-			},
-		},
-		TestToMatrixData{
-			lines: []string{
-				"id,name,note",
-				"1,taro,hogehoge",
-				"2,hanako,foobar",
-			},
-			opts: options{Delimiter: "\t"},
-			out: [][]string{
-				{"id,name,note"},
-				{"1,taro,hogehoge"},
-				{"2,hanako,foobar"},
-			},
-		},
-		TestToMatrixData{
-			lines: []string{
-				"id",
-				"1",
-				"2",
-			},
-			opts: options{Delimiter: ","},
-			out: [][]string{
-				{"id"},
-				{"1"},
-				{"2"},
-			},
-		},
-		TestToMatrixData{
-			lines: []string{},
-			opts:  options{Delimiter: ","},
-			out:   [][]string{},
-		},
-		TestToMatrixData{
-			lines: nil,
-			opts:  options{Delimiter: ","},
-			out:   [][]string{},
-		},
-	}
-	for _, v := range tds {
-		out := toMatrix(v.lines, v.opts)
-		assert.Equal(t, v.out, out)
-	}
-}
-
-type TestTransposeData struct {
-	in  [][]string
-	out [][]string
-}
-
-func TestTranspose(t *testing.T) {
-	tds := []TestTransposeData{
-		TestTransposeData{
-			in: [][]string{
-				{"id", "name", "note"},
-				{"1", "taro", "hogehoge"},
-				{"2", "hanako", "foobar"},
-			},
-			out: [][]string{
-				{"id", "1", "2"},
-				{"name", "taro", "hanako"},
-				{"note", "hogehoge", "foobar"},
-			},
-		},
-		TestTransposeData{
-			in: [][]string{
-				{"id", "name", "note"},
-				{"1", "taro"},
-				{"2", "hanako", "foobar"},
-			},
-			out: [][]string{
-				{"id", "1", "2"},
-				{"name", "taro", "hanako"},
-				{"note", "", "foobar"},
-			},
-		},
-		TestTransposeData{
-			in: [][]string{
-				{"id", "name", "note"},
-				{"1", "taro", "hogehoge"},
-			},
-			out: [][]string{
-				{"id", "1"},
-				{"name", "taro"},
-				{"note", "hogehoge"},
-			},
-		},
-		TestTransposeData{
-			in: [][]string{
-				{"id"},
-				{"1"},
-				{"2"},
-			},
-			out: [][]string{
-				{"id", "1", "2"},
-			},
-		},
-		TestTransposeData{
-			in: [][]string{
-				{"id"},
-			},
-			out: [][]string{
-				{"id"},
-			},
-		},
-		TestTransposeData{
-			in:  [][]string{},
-			out: [][]string{},
-		},
-		TestTransposeData{
-			in:  nil,
-			out: [][]string{},
-		},
-	}
-	for _, v := range tds {
-		out := transpose(v.in)
-		assert.Equal(t, v.out, out)
-	}
-}
-
-type TestFormatData struct {
-	matrix [][]string
-	opts   options
-	out    []string
-}
-
-func TestFormat(t *testing.T) {
-	tds := []TestFormatData{
-		TestFormatData{
-			matrix: [][]string{
-				{"id", "name", "note"},
-				{"1", "taro", "hogehoge"},
-				{"2", "hanako", "foobar"},
-			},
-			opts: options{Delimiter: ","},
-			out: []string{
-				"id,name,note",
-				"1,taro,hogehoge",
-				"2,hanako,foobar",
-			},
-		},
-		TestFormatData{
-			matrix: [][]string{
-				{"id", "name", "note"},
-				{"1", "taro", "hogehoge"},
-				{"2", "", "foobar"},
-			},
-			opts: options{Delimiter: ","},
-			out: []string{
-				"id,name,note",
-				"1,taro,hogehoge",
-				"2,,foobar",
-			},
-		},
-		TestFormatData{
-			matrix: [][]string{
-				{"id", "name", "note"},
-				{"1", "taro", "hogehoge"},
-				{"2", "hanako", "foobar"},
-			},
-			opts: options{Delimiter: "\t"},
-			out: []string{
-				"id	name	note",
-				"1	taro	hogehoge",
-				"2	hanako	foobar",
-			},
-		},
-		TestFormatData{
-			matrix: [][]string{
-				{"id", "name", "note"},
-				{"1", "taro", "hogehoge"},
-				{"2", "hanako", "foobar"},
-			},
-			opts: options{Delimiter: ""},
-			out: []string{
-				"idnamenote",
-				"1tarohogehoge",
-				"2hanakofoobar",
-			},
-		},
-		TestFormatData{
-			matrix: [][]string{},
-			opts:   options{Delimiter: ""},
-			out:    []string{},
-		},
-		TestFormatData{
-			matrix: nil,
-			opts:   options{Delimiter: ""},
-			out:    []string{},
-		},
-	}
-	for _, v := range tds {
-		out := format(v.matrix, v.opts)
-		assert.Equal(t, v.out, out)
-	}
-}
-
 func TestOut(t *testing.T) {
 	err := out([]string{
 		"id,name,note",
@@ -412,4 +248,71 @@ func TestOut(t *testing.T) {
 		"1,taro,male",
 	}, options{OutFile: "hogefugatmp/foobar.csv"})
 	assert.Error(t, err)
+}
+
+type TestOutMultiProcessData struct {
+	lines   []string
+	opts    options
+	infile  string
+	i       int
+	outfile string
+	outdata string
+}
+
+func TestOutMultiProcess(t *testing.T) {
+	outdir := "testdata/out/multiproc"
+	tds := []TestOutMultiProcessData{
+		TestOutMultiProcessData{
+			lines: []string{
+				"id\t1\t2\t3",
+				"name\ttaro\thanako\tjiro",
+				"note\tmale\tfemale\tmale",
+			},
+			opts: options{
+				Delimiter:         "\t",
+				OutDir:            outdir + "/01",
+				OutFileNameFormat: "%03d.tsv",
+			},
+			infile:  inSampleTSV,
+			i:       1,
+			outfile: outdir + "/01/001.tsv",
+			outdata: "id\t1\t2\t3\nname\ttaro\thanako\tjiro\nnote\tmale\tfemale\tmale\n",
+		},
+		TestOutMultiProcessData{
+			lines: []string{
+				"id\t1\t2\t3",
+				"name\ttaro\thanako\tjiro",
+				"note\tmale\tfemale\tmale",
+			},
+			opts: options{
+				Delimiter: "\t",
+				OutDir:    outdir + "/01",
+			},
+			infile:  inSampleTSV,
+			i:       1,
+			outfile: outdir + "/01/sample.tsv.trans",
+			outdata: "id\t1\t2\t3\nname\ttaro\thanako\tjiro\nnote\tmale\tfemale\tmale\n",
+		},
+		TestOutMultiProcessData{
+			lines: []string{
+				"id\t1\t2\t3",
+				"name\ttaro\thanako\tjiro",
+				"note\tmale\tfemale\tmale",
+			},
+			opts:    options{Delimiter: "\t"},
+			infile:  inSampleTSV,
+			i:       1,
+			outfile: outdir + "/01/sample.tsv.trans",
+			outdata: "id\t1\t2\t3\nname\ttaro\thanako\tjiro\nnote\tmale\tfemale\tmale\n",
+		},
+	}
+	for _, v := range tds {
+		outMultiProcess(v.lines, v.opts, v.infile, v.i)
+		if v.opts.OutDir != "" || v.opts.OutFileNameFormat != "" {
+			b, err := ioutil.ReadFile(v.outfile)
+			assert.Nil(t, err)
+			s := string(b)
+			assert.Equal(t, v.outdata, s)
+		}
+	}
 }

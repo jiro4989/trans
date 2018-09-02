@@ -4,8 +4,6 @@
 
 ## 使い方
 
-### 代表的な例
-
 ```bash
 [16:30:29] ~/go/src/github.com/jiro4989/trans master 
 % cat testdata/in/sample.tsv
@@ -32,6 +30,11 @@ trans -d , testdata/in/sample.csv -o testdata/out/sample.csv
 
 # 標準入力にも対応
 cat testdata/in/sample.csv | trans -d ,
+
+# 複数ファイルも可能
+trans testdata/in/sample.tsv testdata/in/sample_transpoted.tsv --outdir testdat/out
+# -> testdata/out/sample.tsv.trans
+# -> testdata/out/sample_transpoted.tsv.trans
 ```
 
 ## ヘルプ
@@ -40,13 +43,54 @@ cat testdata/in/sample.csv | trans -d ,
       trans [OPTIONS]
 
     Application Options:
-      -v, --version    バージョン情報
-      -d, --delimiter= 入力データの区切り文字 (default: "\t")
-      -w, --write      入力ファイルを上書きする
-      -o, --outfile=   出力ファイルパス
+      -v, --version             バージョン情報
+      -d, --delimiter=          入力データの区切り文字 (default: "\t")
+      -w, --write               入力ファイルを上書きする
+      -o, --outfile=            出力ファイルパス
+          --outdir=             出力先ディレクトリ
+          --outfilename-format= 出力ファイル名書式
 
     Help Options:
-      -h, --help       Show this help message
+      -h, --help                Show this help message
+
+## 仕様
+
+### 引数の数で有効になるオプションが変わる
+
+| 引数の数   | OutFile | OutDir | OutFileNameFormat |
+|------------|---------|--------|-------------------|
+| n &lt;=  1 | true    | false  | false             |
+| 1 &lt; n   | false   | true   | true              |
+
+OutFileオプションは処理するデータが1個の場合だけ有効になる
+OutDir、OutFileNameFormatは複数のデータを処理するために用意したオプションである
+ため、処理データが一つの場合は有効にならない。
+
+### OutFileNameFormat未指定の場合は拡張子.transになる
+
+```bash
+$ trans 01.tsv 02.tsv --outdir .
+# -> 01.tsv.trans
+# -> 02.tsv.trans
+```
+
+```bash
+$ trans 01.tsv 02.tsv --outdir out/
+# -> out/01.tsv.trans
+# -> out/02.tsv.trans
+```
+
+```bash
+$ trans 01.tsv 02.tsv --outfilename-format "foobar%d.tsv"
+# -> foobar1.tsv
+# -> foobar2.tsv
+```
+
+```bash
+$ trans 01.tsv 02.tsv --outdir out/ --outfilename-format "foobar%d.tsv"
+# -> out/foobar1.tsv
+# -> out/foobar2.tsv
+```
 
 ## 出力パターン
 

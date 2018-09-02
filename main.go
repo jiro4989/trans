@@ -1,49 +1,141 @@
 package main
 
 import (
-	"bufio"
-	"errors"
 	"fmt"
-	"io"
+	"log"
 	"os"
-	"strings"
+	"path/filepath"
+	"runtime"
+	"sync"
 
 	flags "github.com/jessevdk/go-flags"
+	"github.com/jiro4989/trans/io"
+	"github.com/jiro4989/trans/matrix"
 )
 
 // options オプション引数
 type options struct {
-	Version   func() `short:"v" long:"version" description:"バージョン情報"`
-	Delimiter string `short:"d" long:"delimiter" description:"入力データの区切り文字" default:"\t"`
-	WriteFlag bool   `short:"w" long:"write" description:"入力ファイルを上書きする"`
-	OutFile   string `short:"o" long:"outfile" description:"出力ファイルパス"`
+	Version           func() `short:"v" long:"version" description:"バージョン情報"`
+	Delimiter         string `short:"d" long:"delimiter" description:"入力データの区切り文字" default:"\t"`
+	WriteFlag         bool   `short:"w" long:"write" description:"入力ファイルを上書きする"`
+	OutFile           string `short:"o" long:"outfile" description:"出力ファイルパス"`
+	OutDir            string `long:"outdir" description:"出力先ディレクトリ"`
+	OutFileNameFormat string `long:"outfilename-format" description:"出力ファイル名書式"`
+}
+
+// indexedFileName ファイル名と、何番目に処理をしているかの連番
+type indexedFileName struct {
+	index    int
+	fileName string
+}
+
+// エラー出力ログ
+var logger = log.New(os.Stderr, "", 0)
+
+func init() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
 }
 
 func main() {
 	opts, args := parseOptions()
 
-	check := func(err error) {
-		if err != nil {
+	if len(args) <= 1 {
+		if err := process1Input(args, opts); err != nil {
 			panic(err)
 		}
+		return
 	}
 
-	// 入力を行配列として取得
-	lines, err := withOpen(args, readLines)
-	check(err)
+	ret := processMultiInput(args, opts)
 
-	// 行列データに変換
-	matrix := toMatrix(lines, opts)
+	// エラーの内容は関数内で出力してるので
+	// ここではアプリの戻り地だけを返す
+	os.Exit(ret)
+}
 
-	// 行列の入れ替え
-	transMatrix := transpose(matrix)
+// 引数にファイル指定があるかないかで処理を分岐
+// なかった場合は標準入力を受け取る
+// あった場合はファイルを入力として処理する
+func process1Input(args []string, opts options) error {
+	var (
+		lines []string
+		err   error
+	)
 
-	// 出力用文字列の生成
-	outLines := format(transMatrix, opts)
+	// ファイル指定がなければ標準入力
+	// あればファイル入力
+	if len(args) < 1 {
+		lines, err = io.ReadLines(os.Stdin)
+	} else {
+		lines, err = io.WithOpen(args[0], io.ReadLines)
+	}
+	if err != nil {
+		return err
+	}
 
-	// 出力
-	err = out(outLines, opts)
-	check(err)
+	// 入力データを行列入れ替えして出力
+	outLines := toTransposedLines(lines, opts)
+	if err := out(outLines, opts); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ファイル指定が2こ以上の場合はgoroutineを使って
+// 並列に処理する。
+// また、2個以上の場合のみ有効になるオプションも使用する
+func processMultiInput(args []string, opts options) int {
+	var wg sync.WaitGroup
+	q := make(chan indexedFileName, len(args))
+
+	// エラーが発生したときに記録する
+	ret := 0
+
+	// ワーカーを作成
+	for i := 0; i < runtime.NumCPU(); i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				// 入力ファイル名を受け取る
+				ifn, ok := <-q
+				if !ok {
+					return
+				}
+				// 入力を行配列として取得
+				lines, err := io.WithOpen(ifn.fileName, io.ReadLines)
+				if err != nil {
+					// panicで終了すると、他のgoroutinごと終了する。
+					// エラーが発生しないファイルのほうは処理してほしいので
+					// panicはしない
+					msg := fmt.Sprintf("ファイル読み込みに失敗しました。opts=%v ifn=%v err=%v", opts, ifn, err)
+					logger.Println(msg)
+					ret = 1
+					continue
+				}
+				outLines := toTransposedLines(lines, opts)
+				if err := outMultiProcess(outLines, opts, ifn.fileName, ifn.index); err != nil {
+					msg := fmt.Sprintf("ファイル出力に失敗しました。opts=%v ifn=%v err=%v", opts, ifn, err)
+					logger.Println(msg)
+					ret = 1
+					continue // いらないけれど上の記述に合わせておく
+				}
+			}
+		}()
+	}
+	// 処理対象のファイルパスをキューに送信
+	for i, v := range args {
+		ifn := indexedFileName{
+			index:    i,
+			fileName: v,
+		}
+		q <- ifn
+	}
+	close(q)
+	wg.Wait()
+
+	return ret
 }
 
 // parseOptions はコマンドラインオプションを解析する。
@@ -75,124 +167,64 @@ func parseOptions() (options, []string) {
 	return opts, args
 }
 
-// distinctString は文字列スライスの重複を除外して返却する。
-func distinctString(ss []string) []string {
-	m := make(map[string]bool)
-	uniq := []string{}
-	for _, s := range ss {
-		if !m[s] {
-			m[s] = true
-			uniq = append(uniq, s)
-		}
-	}
-	return uniq
-}
+// toTransposedLines は行スライスデータを行列入れ替えして行に戻して返却する
+// 変換方法は引数のオプションに依存する
+func toTransposedLines(lines []string, opts options) []string {
+	// 行列データに変換
+	mat := matrix.ToMatrix(lines, opts.Delimiter)
 
-// withOpen は入力を引数の関数に適用し、開いた入力を閉じる。
-// argsの値に応じて入力を標準入力かファイル入力かを切り替える
-func withOpen(args []string, f func(r io.Reader) ([]string, error)) ([]string, error) {
-	if f == nil {
-		return nil, errors.New("適用する関数がnilでした。")
-	}
+	// 行列の入れ替え
+	transMatrix := matrix.Transpose(mat)
 
-	// 引数が1個の場合はファイルからデータ読み取り
-	// 引数が0個の場合は標準入力からデータ読み取り
-	var (
-		r *os.File
-	)
-	if len(args) < 1 {
-		r = os.Stdin
-	} else {
-		var err error
-		r, err = os.Open(args[0])
-		if err != nil {
-			return nil, err
-		}
-		defer r.Close()
-	}
-	return f(r)
-}
-
-// readLines は入力を行配列データとして返す。
-func readLines(r io.Reader) ([]string, error) {
-	lines := make([]string, 0)
-	sc := bufio.NewScanner(r)
-	for sc.Scan() {
-		line := sc.Text()
-		line = strings.TrimSpace(line)
-		lines = append(lines, line)
-	}
-	if err := sc.Err(); err != nil {
-		return nil, err
-	}
-	return lines, nil
-}
-
-// toMatrix は行データを行列データに変換する。
-func toMatrix(lines []string, opts options) [][]string {
-	if len(lines) <= 0 {
-		return [][]string{}
-	}
-
-	matrix := make([][]string, len(lines))
-	for i, line := range lines {
-		s := strings.Split(line, opts.Delimiter)
-		matrix[i] = s
-	}
-	return matrix
-}
-
-// transpose は行列データを入れ替えます。
-func transpose(m [][]string) [][]string {
-	if len(m) <= 0 {
-		return [][]string{}
-	}
-
-	// 二次元配列の初期化
-	rl := len(m)
-	cl := len(m[0])
-	matrix := make([][]string, cl)
-	for i := range matrix {
-		matrix[i] = make([]string, rl)
-	}
-
-	// 行列入れ替え
-	for i, r := range m {
-		for j, c := range r {
-			matrix[j][i] = c
-		}
-	}
-	return matrix
-}
-
-// format は行列データを出力用配列に変換する。
-func format(m [][]string, opts options) []string {
-	lines := make([]string, len(m))
-	for i, r := range m {
-		line := strings.Join(r, opts.Delimiter)
-		lines[i] = line
-	}
-	return lines
+	// 出力用文字列の生成
+	return matrix.Format(transMatrix, opts.Delimiter)
 }
 
 // out は標準出力、あるいはファイル出力します。
 // 出力ファイルを指定した場合はファイル出力する。
 // 出力ファイル指定がない場合は標準出力する。
-func out(ls []string, opts options) error {
+func out(lines []string, opts options) error {
 	if opts.OutFile != "" {
-		w, err := os.OpenFile(opts.OutFile, os.O_RDWR|os.O_CREATE, os.ModePerm)
-		if err != nil {
+		return io.WriteFile(opts.OutFile, lines)
+	}
+	printLines(lines)
+	return nil
+}
+
+// outMultiProcess はgoroutineから呼ばれる標準出力、またはファイル出力する。
+// オプションの有無によって出力先やファイル名を変更する。
+//
+// 1. 出力先ディレクトリと出力ナンバリング書式を指定している場合は、
+//    必要ならディレクトリを作成して連番を付与してファイルを生成する。
+// 2. ディレクトリのみ指定の場合は、必要ならディレクトリを生成し、
+//    処理元のファイル名.transという名前でファイルを出力する。
+// 3. 出力ナンバリング書式のみ指定の場合は、カレントディレクトリに
+//    ナンバリングをしてファイル出力する。
+// 4. 上記のいずれにも該当しない場合、標準出力にlinesを出力する。
+func outMultiProcess(lines []string, opts options, infile string, i int) error {
+	if opts.OutDir != "" && opts.OutFileNameFormat != "" {
+		if err := os.MkdirAll(opts.OutDir, os.ModePerm); err != nil {
 			return err
 		}
-		defer w.Close()
-		for _, v := range ls {
-			fmt.Fprintln(w, v)
-		}
-		return nil
+		outfmt := fmt.Sprintf("%s/%s", opts.OutDir, opts.OutFileNameFormat)
+		outfile := fmt.Sprintf(outfmt, i)
+		return io.WriteFile(outfile, lines)
 	}
 
-	for _, v := range ls {
-		fmt.Println(v)
+	if opts.OutDir != "" {
+		if err := os.MkdirAll(opts.OutDir, os.ModePerm); err != nil {
+			return err
+		}
+		f := filepath.Base(infile)
+		outfile := fmt.Sprintf("%s/%s.trans", opts.OutDir, f)
+		return io.WriteFile(outfile, lines)
 	}
+
+	if opts.OutFileNameFormat != "" {
+		outfile := fmt.Sprintf(opts.OutFileNameFormat, i)
+		return io.WriteFile(outfile, lines)
+	}
+
+	printLines(lines)
 	return nil
 }
