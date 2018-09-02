@@ -27,8 +27,36 @@ func TestMain(t *testing.T) {
 	os.Args = []string{"main.go", "-d", ",", inSampleCSV, "-o", "testdata/out/sample_main.csv"}
 	main()
 
+	os.Args = []string{"main.go", "-d", ",", inSampleCSV, inSampleCSV, "-o", "testdata/out/sample_main.csv"}
+	main()
+
 	os.Args = []string{"main.go", inSampleTSV, "-o", "testdata/out/sample_main.tsv"}
 	main()
+
+	exist := func(fn string) bool {
+		_, err := os.Stat(fn)
+		return err == nil
+	}
+
+	mainOutDir := "testdata/out/main"
+	os.Args = []string{
+		"main.go",
+		inSampleTSV, inSampleTranspotedTSV,
+		"--outdir", mainOutDir + "/01",
+	}
+	main()
+	assert.Equal(t, true, exist(mainOutDir+"/01/sample.tsv.trans"))
+	assert.Equal(t, true, exist(mainOutDir+"/01/sample_transpoted.tsv.trans"))
+
+	os.Args = []string{
+		"main.go",
+		inSampleTSV, inSampleTranspotedTSV,
+		"--outdir", mainOutDir + "/02",
+		"--outfilename-format", "main%02d.tsv",
+	}
+	main()
+	assert.Equal(t, true, exist(mainOutDir+"/02/main01.tsv"))
+	assert.Equal(t, true, exist(mainOutDir+"/02/main02.tsv"))
 }
 
 type TestProcess1InputData struct {
