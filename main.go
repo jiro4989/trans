@@ -202,6 +202,10 @@ func out(lines []string, opts options) error {
 //    ナンバリングをしてファイル出力する。
 // 4. 上記のいずれにも該当しない場合、標準出力にlinesを出力する。
 func outMultiProcess(lines []string, opts options, infile string, i int) error {
+	if opts.WriteFlag {
+		return io.WriteFile(infile, lines)
+	}
+
 	if opts.OutDir != "" && opts.OutFileNameFormat != "" {
 		if err := os.MkdirAll(opts.OutDir, os.ModePerm); err != nil {
 			return err
