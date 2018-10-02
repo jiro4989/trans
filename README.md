@@ -1,5 +1,7 @@
 # trans (Transpose)
 
+[![Build Status](https://travis-ci.org/jiro4989/trans.svg?branch=master)](https://travis-ci.org/jiro4989/trans)
+
 ファイル、標準入力の行列データの行と列を入れ替えるコマンド。
 
 ## インストール方法
